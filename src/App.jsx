@@ -10,6 +10,7 @@ import AgentLog from './components/pages/AgentLog'
 import AgentDrawer from './components/AgentDrawer'
 import Onboarding from './components/Onboarding'
 import Toast from './components/Toast'
+import BottomNav from './components/BottomNav'
 
 const PAGE_TITLES = {
   cashflow: 'Cash Flow',
@@ -98,6 +99,12 @@ export default function App() {
       </main>
 
       <button className="fab" onClick={() => setDrawerOpen(true)}>✦ Ask agent</button>
+      <BottomNav
+        currentPage={currentPage}
+        onPageChange={handlePageChange}
+        onAsk={() => setDrawerOpen(true)}
+        neededCount={P[currentPersona].needed.length}
+      />
 
       <AgentDrawer
         open={drawerOpen}
