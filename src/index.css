@@ -310,15 +310,15 @@ nav{padding:8px 6px;flex:1;}
   .fab{display:none;}
   .topbar{padding:0 14px;}
   .btn{font-size:11px;padding:6px 10px;}
-  .topbar-setup{display:none;}
-  .topbar-persona{display:block;padding:5px 8px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:var(--sans);font-size:11px;font-weight:500;color:var(--brand);background:var(--brand-dim);outline:none;cursor:pointer;max-width:110px;}
+  .topbar-setup{display:none !important;}
+  .topbar-persona{display:block !important;padding:5px 8px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:var(--sans);font-size:11px;font-weight:500;color:var(--brand);background:var(--brand-dim);outline:none;cursor:pointer;max-width:120px;}
 }
 @media(max-width:480px){
   .kpi-grid.cols3{grid-template-columns:repeat(2,1fr);}
   .mini-chart{height:36px;}
 }
 
-/* ── TOPBAR PERSONA (mobile only) ── */
+/* ── TOPBAR PERSONA (desktop: hide select, show setup; mobile: reversed) ── */
 .topbar-persona{display:none;}
 .topbar-setup{display:flex;}
 
