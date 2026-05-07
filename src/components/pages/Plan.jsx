@@ -10,22 +10,28 @@ const FD_DATA = [
 
 const WI_DEFAULTS = { raise: 20, leave: 6, sip: 10000 }
 
-function WhatIf({ persona: p }) {
+function WhatIf({ persona: p, showToast }) {
   const [scenario, setScenario] = useState('raise')
   const [wiVal, setWiVal] = useState(20)
+  const [actionDone, setActionDone] = useState(false)
 
-  const changeScenario = (s) => { setScenario(s); setWiVal(WI_DEFAULTS[s]) }
+  const changeScenario = (s) => { setScenario(s); setWiVal(WI_DEFAULTS[s]); setActionDone(false) }
 
   const income = p.cfData?.income || 0
   const raise = Number(wiVal) || 20
   const months = Number(wiVal) || 6
   const extra = Number(wiVal) || 10000
 
+  const handleTakeAction = () => {
+    setActionDone(true)
+    showToast('Investment plan created — check agent log')
+  }
+
   return (
     <div className="card">
       <div className="sec-hdr">
         <div className="sec-title">What if?</div>
-        <div style={{ fontSize: '11px', color: 'var(--t3)' }}>Model scenarios on your real numbers</div>
+        <div style={{ fontSize: '11px', color: 'var(--t3)' }}>Model scenarios</div>
       </div>
       <div className="tab-bar">
         {[['raise', 'Raise'], ['leave', 'Career break'], ['sip', 'Invest more']].map(([id, label]) => (
@@ -79,12 +85,84 @@ function WhatIf({ persona: p }) {
           <div className="wi-result-card">
             <div className="wi-result-title">If you invested ₹{fmt(extra)} more/month</div>
             <div className="wi-result-row"><span>Extra per year</span><span className="wi-current">—</span><span className="wi-new">₹{fmt(extra * 12)}</span></div>
-            <div className="wi-result-row"><span>Corpus gain in 10 years</span><span className="wi-current">—</span><span className="wi-new">+₹{fmt(Math.round(extra * 12 * ((Math.pow(1.12, 10) - 1) / 0.12)))}</span></div>
-            <div className="wi-result-row"><span>Corpus gain in 20 years</span><span className="wi-current">—</span><span className="wi-new">+₹{fmt(Math.round(extra * 12 * ((Math.pow(1.12, 20) - 1) / 0.12)))}</span></div>
+            <div className="wi-result-row"><span>Corpus in 10 years</span><span className="wi-current">—</span><span className="wi-new">+₹{fmt(Math.round(extra * 12 * ((Math.pow(1.12, 10) - 1) / 0.12)))}</span></div>
+            <div className="wi-result-row"><span>Corpus in 20 years</span><span className="wi-current">—</span><span className="wi-new">+₹{fmt(Math.round(extra * 12 * ((Math.pow(1.12, 20) - 1) / 0.12)))}</span></div>
             <div className="wi-result-row"><span>FIRE date impact</span><span className="wi-current">Age 54</span><span className="wi-new">Age {Math.max(46, 54 - Math.floor(extra / 5000))}</span></div>
           </div>
+          {!actionDone ? (
+            <button className="btn btn-primary" style={{ width: '100%', marginTop: '12px', fontSize: '12px' }} onClick={handleTakeAction}>
+              Take action — start investing ₹{fmt(extra)}/month →
+            </button>
+          ) : (
+            <div style={{ background: 'var(--ok-dim)', borderRadius: '8px', padding: '10px 12px', marginTop: '12px', fontSize: '12px', color: 'var(--ok)', fontWeight: 500 }}>
+              ✓ Investment plan created. Setting up SIP in agent log.
+            </div>
+          )}
         </>
       )}
+    </div>
+  )
+}
+
+function EditGoalModal({ goal, onClose, onSave }) {
+  const [name, setName] = useState(goal.name)
+  const [target, setTarget] = useState(goal.target)
+  const [monthly, setMonthly] = useState(goal.monthly)
+  const aiSuggested = Math.round(goal.monthly * 1.25)
+
+  return (
+    <div className="action-modal-overlay" onClick={onClose}>
+      <div className="action-modal" onClick={e => e.stopPropagation()}>
+        <div className="am-handle" />
+        <div className="am-chip">Edit goal</div>
+        <div className="am-title" style={{ marginBottom: '16px' }}>Update your goal</div>
+
+        <div style={{ marginBottom: '12px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--t3)', marginBottom: '5px' }}>Goal name</div>
+          <input
+            style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '8px', fontFamily: 'var(--sans)', fontSize: '13px', color: 'var(--t1)', background: 'var(--surface2)', outline: 'none' }}
+            value={name}
+            onChange={e => setName(e.target.value)}
+          />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+          <div>
+            <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--t3)', marginBottom: '5px' }}>Target (₹)</div>
+            <input
+              className="wi-input" type="number" style={{ width: '100%', maxWidth: 'unset' }}
+              value={target}
+              onChange={e => setTarget(Number(e.target.value))}
+            />
+          </div>
+          <div>
+            <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--t3)', marginBottom: '5px' }}>Monthly (₹)</div>
+            <input
+              className="wi-input" type="number" style={{ width: '100%', maxWidth: 'unset' }}
+              value={monthly}
+              onChange={e => setMonthly(Number(e.target.value))}
+            />
+          </div>
+        </div>
+
+        <div
+          style={{ background: 'var(--brand-dim)', borderRadius: '8px', padding: '10px 12px', marginBottom: '14px', cursor: 'pointer' }}
+          onClick={() => setMonthly(aiSuggested)}
+        >
+          <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--brand)', marginBottom: '2px' }}>✦ AI suggestion</div>
+          <div style={{ fontSize: '12px', color: 'var(--t2)' }}>
+            Increase to ₹{aiSuggested.toLocaleString('en-IN')}/month — reach your goal ~{Math.round((goal.target - goal.current) / goal.monthly - (goal.target - goal.current) / aiSuggested)} months earlier.
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--brand)', marginTop: '4px', fontWeight: 500 }}>Tap to apply →</div>
+        </div>
+
+        <div className="am-btns">
+          <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => { onSave({ name, target, monthly }); onClose() }}>
+            Save changes ✓
+          </button>
+          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -155,8 +233,17 @@ function GoalConversation({ showToast }) {
 
 export default function Plan({ persona: p, showToast }) {
   const trendMonths = ['N', 'D', 'J', 'F', 'M', 'A']
+  const [editGoal, setEditGoal] = useState(null)
+  const [goalEdits, setGoalEdits] = useState({})
 
-  return (
+  const handleSaveGoal = (idx, vals) => {
+    setGoalEdits(e => ({ ...e, [idx]: vals }))
+    showToast('Goal updated')
+  }
+
+  const getGoal = (g, i) => ({ ...g, ...(goalEdits[i] || {}) })
+
+  const leftContent = (
     <>
       {p.hasPlan === 'corpus' && (
         <div className="card" style={{ marginBottom: '14px' }}>
@@ -247,33 +334,58 @@ export default function Plan({ persona: p, showToast }) {
             <GoalConversation showToast={showToast} />
           </div>
           {p.goals.map((g, i) => {
-            const pct = Math.round(g.current / g.target * 100)
-            const mos = Math.ceil((g.target - g.current) / g.monthly)
+            const goal = getGoal(g, i)
+            const pct = Math.min(100, Math.round(goal.current / goal.target * 100))
+            const mos = Math.ceil((goal.target - goal.current) / goal.monthly)
             return (
               <div key={i} className="goal-card">
                 <div className="goal-top">
                   <div>
-                    <div className="goal-name">{g.name}</div>
-                    <div className="goal-auto">Auto-saving ₹{g.monthly.toLocaleString('en-IN')}/month</div>
+                    <div className="goal-name">{goal.name}</div>
+                    <div className="goal-auto">Auto-saving ₹{goal.monthly.toLocaleString('en-IN')}/month</div>
                   </div>
-                  <div style={{ fontSize: '13px', fontWeight: 600, fontFamily: 'var(--mono)', color: 'var(--brand)' }}>{pct}%</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 600, fontFamily: 'var(--mono)', color: 'var(--brand)' }}>{pct}%</div>
+                    <button
+                      className="sec-link"
+                      style={{ fontSize: '11px', border: '1px solid var(--border)', borderRadius: '6px', padding: '3px 8px', color: 'var(--t2)' }}
+                      onClick={() => setEditGoal(i)}
+                    >
+                      Edit
+                    </button>
+                  </div>
                 </div>
                 <div className="goal-track">
-                  <div className="goal-bar" style={{ width: `${pct}%`, background: g.color }} />
+                  <div className="goal-bar" style={{ width: `${pct}%`, background: goal.color }} />
                 </div>
                 <div className="goal-stats">
-                  <span>Saved: <strong>₹{fmt(g.current)}</strong></span>
-                  <span>Target: <strong>₹{fmt(g.target)}</strong></span>
+                  <span>Saved: <strong>₹{fmt(goal.current)}</strong></span>
+                  <span>Target: <strong>₹{fmt(goal.target)}</strong></span>
                   <span>Done in: <strong>~{mos} mo</strong></span>
                 </div>
-                <div className="goal-insight">💡 {g.insight}</div>
+                <div className="goal-insight">💡 {goal.insight}</div>
               </div>
             )
           })}
         </div>
       )}
+    </>
+  )
 
-      <WhatIf persona={p} />
+  return (
+    <>
+      {editGoal !== null && (
+        <EditGoalModal
+          goal={getGoal(p.goals[editGoal], editGoal)}
+          onClose={() => setEditGoal(null)}
+          onSave={(vals) => handleSaveGoal(editGoal, vals)}
+        />
+      )}
+
+      <div className="plan-grid">
+        <div>{leftContent}</div>
+        <div><WhatIf persona={p} showToast={showToast} /></div>
+      </div>
     </>
   )
 }

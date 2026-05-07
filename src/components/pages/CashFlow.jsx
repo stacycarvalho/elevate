@@ -1,14 +1,114 @@
 import { useState } from 'react'
 import { allTxns, subs } from '../../data/transactions'
-import { fmt } from '../../utils'
 
 const DATE_RANGES = [
-  { id: '7d', label: 'Last 7 days' },
-  { id: '30d', label: 'Last 30 days' },
-  { id: '90d', label: 'Last 90 days' },
-  { id: '6m', label: '6 months' },
-  { id: '1y', label: '1 year' },
+  { id: '7d', label: '7 days', mult: 0.23 },
+  { id: '30d', label: '30 days', mult: 1 },
+  { id: '90d', label: '3 months', mult: 3 },
+  { id: '6m', label: '6 months', mult: 6 },
+  { id: '1y', label: '1 year', mult: 12 },
 ]
+
+const MONTHS_BY_RANGE = {
+  '7d': ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
+  '30d': ['W1', 'W2', 'W3', 'W4', 'W5', 'Now'],
+  '90d': ['Feb', 'Mar', 'Apr', 'Now', '', ''],
+  '6m': ['Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr'],
+  '1y': ['May', 'Jul', 'Sep', 'Nov', 'Jan', 'Apr'],
+}
+
+function fmt(n) {
+  if (n >= 10000000) return (n / 10000000).toFixed(1) + 'Cr'
+  if (n >= 100000) return (n / 100000).toFixed(1) + 'L'
+  if (n >= 1000) return (n / 1000).toFixed(0) + 'K'
+  return n.toLocaleString('en-IN')
+}
+
+function TrendLine({ spendData, incomeData, months }) {
+  const all = [...spendData, ...incomeData]
+  const min = Math.min(...all) * 0.9
+  const max = Math.max(...all) * 1.05
+  const W = 240, H = 52
+  const x = (i) => (i / (spendData.length - 1)) * W
+  const y = (v) => H - ((v - min) / (max - min)) * H
+
+  const path = (data) => data.map((v, i) => `${i === 0 ? 'M' : 'L'} ${x(i)} ${y(v)}`).join(' ')
+  const area = (data) => `${path(data)} L ${x(data.length - 1)} ${H} L 0 ${H} Z`
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: '100%', height: '52px', display: 'block' }}>
+      <defs>
+        <linearGradient id="incGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="rgba(11,138,104,.25)" />
+          <stop offset="100%" stopColor="rgba(11,138,104,.02)" />
+        </linearGradient>
+        <linearGradient id="spendGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="rgba(58,90,249,.2)" />
+          <stop offset="100%" stopColor="rgba(58,90,249,.01)" />
+        </linearGradient>
+      </defs>
+      <path d={area(incomeData)} fill="url(#incGrad)" />
+      <path d={area(spendData)} fill="url(#spendGrad)" />
+      <path d={path(incomeData)} fill="none" stroke="var(--ok)" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d={path(spendData)} fill="none" stroke="var(--brand)" strokeWidth="1.5" strokeLinejoin="round" />
+      {spendData.map((v, i) => (
+        <circle key={i} cx={x(i)} cy={y(v)} r="2.5" fill="var(--brand)" />
+      ))}
+    </svg>
+  )
+}
+
+function NegotiateModal({ sub, onClose, showToast }) {
+  const [sent, setSent] = useState(false)
+  const emailDraft = `Subject: Loyalty discount request — ${sub.name} customer for ${sub.months} months
+
+Hi ${sub.name} Support,
+
+I've been a loyal customer for over ${sub.months} months and would like to discuss my current plan.
+
+I've noticed that equivalent plans from competitors are available at a lower price point. As a long-standing customer, I'd like to request a loyalty discount or a plan adjustment that better reflects market rates.
+
+I value the service and would prefer to stay — but I'd appreciate if you could help me find a more sustainable rate.
+
+Looking forward to hearing from you.
+
+Best regards`
+
+  return (
+    <div className="action-modal-overlay" onClick={onClose}>
+      <div className="action-modal" style={{ maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+        <div className="am-handle" />
+        {sent ? (
+          <>
+            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+              <div style={{ fontSize: '36px', marginBottom: '12px' }}>✉️</div>
+              <div className="am-title">Email sent!</div>
+              <div className="am-impact">Your negotiation email has been drafted and is ready to send. Check your email client.</div>
+              <button className="btn btn-primary" style={{ width: '100%', marginTop: '16px' }} onClick={onClose}>Done</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="am-chip am-chip-blue">Negotiation draft</div>
+            <div className="am-title">Negotiate {sub.name}</div>
+            <div className="am-impact" style={{ marginBottom: '12px' }}>
+              Review the draft email below. The agent found that equivalent plans are available cheaper.
+            </div>
+            <div style={{ background: 'var(--surface2)', borderRadius: '10px', padding: '14px', fontSize: '11px', color: 'var(--t2)', lineHeight: 1.7, fontFamily: 'var(--mono)', whiteSpace: 'pre-wrap', marginBottom: '14px' }}>
+              {emailDraft}
+            </div>
+            <div className="am-btns">
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => { setSent(true); showToast('Email sent to ' + sub.name) }}>
+                Send email ✓
+              </button>
+              <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
 
 function Tooltip({ tip }) {
   return (
@@ -22,6 +122,9 @@ function Tooltip({ tip }) {
 export default function CashFlow({ persona: p, showToast }) {
   const [dateRange, setDateRange] = useState('30d')
   const [activeTab, setActiveTab] = useState('txns')
+  const [activeCat, setActiveCat] = useState('All')
+  const [subStatus, setSubStatus] = useState({})
+  const [negotiating, setNegotiating] = useState(null)
 
   if (!p.hasCf) {
     return (
@@ -59,12 +162,41 @@ export default function CashFlow({ persona: p, showToast }) {
   }
 
   const d = p.cfData
-  const maxSpend = Math.max(...d.spendData)
-  const barHeights = d.spendData.map(v => Math.round(v / maxSpend * 40))
-  const incHeights = d.incomeData.map(v => Math.round(v / maxSpend * 40))
+  const range = DATE_RANGES.find(r => r.id === dateRange)
+  const mult = range.mult
+  const scaledIncome = Math.round(d.income * mult)
+  const scaledSpend = Math.round(d.spend * mult)
+  const scaledSurplus = scaledIncome - scaledSpend
+
+  // Scale chart data proportionally
+  const chartMonths = MONTHS_BY_RANGE[dateRange]
+  const scaledSpendData = d.spendData.map(v => Math.round(v * mult / 6))
+  const scaledIncomeData = d.incomeData.map(v => Math.round(v * mult / 6))
+
+  const categories = ['All', ...Array.from(new Set(allTxns.map(t => t.cat)))]
+  const filteredTxns = activeCat === 'All' ? allTxns : allTxns.filter(t => t.cat === activeCat)
+
+  const handleSubAction = (i, action) => {
+    if (action === 'keep') {
+      setSubStatus(s => ({ ...s, [i]: 'kept' }))
+      showToast(`Keeping ${subs[i].name}`)
+    } else if (action === 'cancel') {
+      setSubStatus(s => ({ ...s, [i]: 'cancelling' }))
+      showToast('Cancellation initiated')
+    } else if (action === 'negotiate') {
+      setNegotiating(subs[i])
+    }
+  }
+
+  const activeSubs = subs.filter((_, i) => subStatus[i] !== 'cancelling')
+  const cancelledSubs = subs.filter((_, i) => subStatus[i] === 'cancelling')
 
   return (
     <>
+      {negotiating && (
+        <NegotiateModal sub={negotiating} onClose={() => setNegotiating(null)} showToast={showToast} />
+      )}
+
       <div className="date-filter">
         {DATE_RANGES.map(r => (
           <button
@@ -81,44 +213,37 @@ export default function CashFlow({ persona: p, showToast }) {
         <div className="kpi-grid cols3" style={{ marginBottom: '16px' }}>
           <div className="kpi">
             <div className="kpi-label">
-              Money in <Tooltip tip="Total income received this period — salary, interest, dividends, or any other money that came in." />
+              Money in <Tooltip tip="Total income received this period." />
             </div>
-            <div className="kpi-value">₹{fmt(d.income)}</div>
+            <div className="kpi-value">₹{fmt(scaledIncome)}</div>
             <span className="kpi-delta delta-up">↑ Salary credited</span>
           </div>
           <div className="kpi">
             <div className="kpi-label">
-              Money out <Tooltip tip="Total money that left your accounts this period — bills, EMIs, shopping, food, everything." />
+              Money out <Tooltip tip="Total money that left your accounts." />
             </div>
-            <div className="kpi-value">₹{fmt(d.spend)}</div>
-            <span className="kpi-delta delta-neutral">This period</span>
+            <div className="kpi-value">₹{fmt(scaledSpend)}</div>
+            <span className="kpi-delta delta-neutral">{range.label}</span>
           </div>
           <div className="kpi">
             <div className="kpi-label">
-              What's left <Tooltip tip="Money in minus money out. This is what you have available to save or invest. Positive is good." />
+              What's left <Tooltip tip="Income minus spending." />
             </div>
-            <div className="kpi-value" style={{ color: 'var(--ok)' }}>₹{fmt(d.surplus)}</div>
+            <div className="kpi-value" style={{ color: 'var(--ok)' }}>₹{fmt(scaledSurplus)}</div>
             <span className="kpi-delta delta-up">↑ Available to save</span>
           </div>
         </div>
 
-        <div style={{ fontSize: '11px', fontWeight: 500, color: 'var(--t3)', marginBottom: '6px', display: 'flex', justifyContent: 'space-between' }}>
-          <span>6-month trend</span>
+        <div style={{ fontSize: '11px', fontWeight: 500, color: 'var(--t3)', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
+          <span>Trend — {range.label}</span>
           <span style={{ display: 'flex', gap: '10px' }}>
-            <span style={{ color: 'var(--brand)' }}>■ Spending</span>
-            <span style={{ color: 'var(--ok)' }}>■ Income</span>
+            <span style={{ color: 'var(--brand)' }}>— Spending</span>
+            <span style={{ color: 'var(--ok)' }}>— Income</span>
           </span>
         </div>
-        <div className="mini-chart">
-          {d.months.map((_, i) => (
-            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', justifyContent: 'flex-end' }}>
-              <div className="mini-bar" style={{ height: `${incHeights[i]}px`, background: 'rgba(11,138,104,.15)', width: '100%' }} />
-              <div className="mini-bar" style={{ height: `${barHeights[i]}px`, background: 'var(--brand)', width: '100%' }} />
-            </div>
-          ))}
-        </div>
-        <div className="mini-labels">
-          {d.months.map(m => <div key={m} className="mini-label">{m}</div>)}
+        <TrendLine spendData={scaledSpendData} incomeData={scaledIncomeData} months={chartMonths} />
+        <div className="mini-labels" style={{ marginTop: '4px' }}>
+          {chartMonths.map((m, i) => <div key={i} className="mini-label">{m}</div>)}
         </div>
       </div>
 
@@ -131,10 +256,22 @@ export default function CashFlow({ persona: p, showToast }) {
             </div>
 
             <div className={`tab-content ${activeTab === 'txns' ? 'active' : ''}`}>
-              <div style={{ background: 'var(--warn-dim)', borderRadius: '8px', padding: '10px 12px', marginBottom: '12px', fontSize: '12px', color: 'var(--warn)' }}>
+              <div style={{ background: 'var(--warn-dim)', borderRadius: '8px', padding: '10px 12px', marginBottom: '10px', fontSize: '12px', color: 'var(--warn)' }}>
                 ⚠ Anomaly: Airtel charge is ₹200 higher than your usual amount this month.
               </div>
-              {allTxns.map((t, i) => (
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                {categories.map(cat => (
+                  <button
+                    key={cat}
+                    className={`df-btn ${activeCat === cat ? 'active' : ''}`}
+                    style={{ fontSize: '10px', padding: '3px 9px' }}
+                    onClick={() => setActiveCat(cat)}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+              {filteredTxns.map((t, i) => (
                 <div key={i} className="txn">
                   <div className="txn-ico" style={{ background: t.bg }}>{t.ico}</div>
                   <div>
@@ -146,26 +283,59 @@ export default function CashFlow({ persona: p, showToast }) {
                   </div>
                 </div>
               ))}
+              {filteredTxns.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '24px', color: 'var(--t3)', fontSize: '12px' }}>
+                  No transactions in {activeCat}
+                </div>
+              )}
             </div>
 
             <div className={`tab-content ${activeTab === 'subs' ? 'active' : ''}`}>
-              {subs.map((s, i) => (
-                <div key={i} style={{ border: '1px solid var(--border)', borderRadius: '10px', padding: '14px', marginBottom: '8px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <div style={{ fontSize: '13px', fontWeight: 500 }}>{s.name}</div>
-                    <div style={{ fontSize: '12px', fontWeight: 500, fontFamily: 'var(--mono)' }}>{s.amt}</div>
+              {activeSubs.map((s, idx) => {
+                const i = subs.indexOf(s)
+                const status = subStatus[i]
+                return (
+                  <div key={i} style={{ border: '1px solid var(--border)', borderRadius: '10px', padding: '14px', marginBottom: '8px', opacity: status === 'kept' ? 0.8 : 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 500 }}>{s.name}</div>
+                      <div style={{ fontSize: '12px', fontWeight: 500, fontFamily: 'var(--mono)' }}>{s.amt}</div>
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--t3)', marginBottom: '8px' }}>{s.plan}</div>
+                    {status !== 'kept' && (
+                      <div style={{ fontSize: '12px', color: 'var(--t2)', background: 'var(--surface2)', padding: '8px 10px', borderRadius: '7px', marginBottom: '10px' }}>
+                        💡 {s.prompt}
+                      </div>
+                    )}
+                    {status === 'kept' ? (
+                      <div style={{ fontSize: '11px', color: 'var(--ok)', fontWeight: 500 }}>✓ Keeping this subscription</div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button className="ac-btn ac-approve btn-sm" onClick={() => handleSubAction(i, 'keep')}>Keep</button>
+                        <button className="ac-btn ac-dismiss btn-sm" onClick={() => handleSubAction(i, 'cancel')}>Cancel</button>
+                        <button className="ac-btn ac-dismiss btn-sm" onClick={() => handleSubAction(i, 'negotiate')}>Negotiate</button>
+                      </div>
+                    )}
                   </div>
-                  <div style={{ fontSize: '11px', color: 'var(--t3)', marginBottom: '8px' }}>{s.plan}</div>
-                  <div style={{ fontSize: '12px', color: 'var(--t2)', background: 'var(--surface2)', padding: '8px 10px', borderRadius: '7px', marginBottom: '10px' }}>
-                    💡 {s.prompt}
+                )
+              })}
+              {cancelledSubs.length > 0 && (
+                <>
+                  <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.5px', margin: '14px 0 8px' }}>
+                    Cancellations in progress
                   </div>
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    <button className="ac-btn ac-approve btn-sm" onClick={() => showToast(`Kept ${s.name}`)}>Keep</button>
-                    <button className="ac-btn ac-dismiss btn-sm" onClick={() => showToast('Cancellation started')}>Cancel</button>
-                    <button className="ac-btn ac-dismiss btn-sm" onClick={() => showToast('Negotiation email drafted')}>Negotiate</button>
-                  </div>
-                </div>
-              ))}
+                  {cancelledSubs.map(s => {
+                    const i = subs.indexOf(s)
+                    return (
+                      <div key={i} style={{ border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 14px', marginBottom: '8px', opacity: 0.5 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ fontSize: '12px', fontWeight: 500 }}>{s.name}</div>
+                          <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 8px', borderRadius: '8px', background: 'var(--danger-dim)', color: 'var(--danger)' }}>Cancelling</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </>
+              )}
             </div>
           </div>
         </div>
