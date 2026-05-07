@@ -426,7 +426,7 @@ nav{padding:8px 6px;flex:1;}
 .donut-seg:hover{opacity:0.72;}
 
 /* ── CF TOP GRID (KPI+trend | donut) ── */
-.cf-top-grid{display:grid;grid-template-columns:1fr 260px;gap:14px;margin-bottom:14px;align-items:start;}
+.cf-top-grid{display:grid;grid-template-columns:1fr 300px;gap:14px;margin-bottom:14px;align-items:stretch;}
 
 /* ── CF ANOMALY + MOBILE DROPDOWN ROW ── */
 .cf-anomaly-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
