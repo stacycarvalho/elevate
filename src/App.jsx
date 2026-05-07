@@ -50,7 +50,7 @@ export default function App() {
   }, [])
 
   const activeNavPage = currentPage === 'log' ? 'home' : currentPage
-  const topbarTitle = currentPage === 'home' ? P[currentPersona].greeting : (PAGE_TITLES[currentPage] || currentPage)
+  const topbarTitle = PAGE_TITLES[currentPage] || 'Elevate'
 
   return (
     <div className="app">
@@ -70,8 +70,9 @@ export default function App() {
         <Topbar
           title={topbarTitle}
           onToggleSidebar={() => setSidebarOpen(o => !o)}
-          onAsk={() => setDrawerOpen(true)}
           onSetup={() => setOnboardingOpen(true)}
+          currentPersona={currentPersona}
+          onPersonaChange={handlePersonaChange}
         />
         <div className="content">
           <div className={`page ${currentPage === 'home' ? 'active' : ''}`}>
