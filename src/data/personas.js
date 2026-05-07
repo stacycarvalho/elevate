@@ -30,6 +30,7 @@ export const P = {
       { label: 'Protection', score: 5, color: '#C42B2B' }, { label: 'Savings', score: 12, color: '#C47A0C' },
       { label: 'Investing', score: 0, color: '#E0E3F5' }, { label: 'Planning', score: 10, color: '#C47A0C' },
     ],
+    healthInsight: 'Your biggest gap is Protection (5/100). A ₹50L term plan costs ~₹400/month and would add 30+ points to your overall score.',
     hasCf: false, hasPlan: 'goals',
     goals: [
       { name: 'Emergency fund', target: 96000, current: 8000, monthly: 500, color: '#3A5AF9', insight: "At ₹500/week, you'll hit 1 month's expenses in 14 weeks. Increasing to ₹1,000/week cuts that in half." },
@@ -75,6 +76,17 @@ export const P = {
       { label: 'Cash flow', score: 68, color: '#0B8A68' }, { label: 'Debt', score: 55, color: '#C47A0C' },
       { label: 'Protection', score: 12, color: '#C42B2B' }, { label: 'Savings', score: 58, color: '#C47A0C' },
       { label: 'Investing', score: 62, color: '#0B8A68' }, { label: 'Planning', score: 44, color: '#C47A0C' },
+    ],
+    healthInsight: 'Your lowest score is Protection (12/100). Adding term insurance for both earners would boost your overall score by ~15 points and protect your household income.',
+    investments: [
+      { name: 'HDFC Balanced SIP', type: 'Equity', value: 120000, pct: 52, color: '#3A5AF9' },
+      { name: 'PPF', type: 'Debt', value: 72000, pct: 31, color: '#0B8A68' },
+      { name: 'NPS', type: 'Pension', value: 38000, pct: 17, color: '#C47A0C' },
+    ],
+    investmentInsight: "Your portfolio is well-balanced for a builder. The ₹9,400/month sitting idle in your salary account could be added to your SIP — compounding over 15 years that's the difference of ₹32L.",
+    investmentActions: [
+      { label: 'Deploy idle ₹9,400/month into SIP', btn: 'Take action' },
+      { label: 'Review PPF vs NPS allocation', btn: 'See analysis' },
     ],
     hasCf: true, hasPlan: 'goals+nw',
     goals: [
@@ -122,6 +134,7 @@ export const P = {
       { label: 'Protection', score: 58, color: '#C47A0C' }, { label: 'Savings', score: 65, color: '#0B8A68' },
       { label: 'Investing', score: 38, color: '#C42B2B' }, { label: 'Planning', score: 44, color: '#C47A0C' },
     ],
+    healthInsight: 'Your strongest dimension is Debt (92/100) — no loans is a real achievement. Focus on growing Investing (38) — even a simple debt mutual fund at 7% would move the needle significantly.',
     hasCf: true, hasPlan: 'corpus',
     goals: [
       { name: 'Medical emergency fund', target: 500000, current: 280000, monthly: 5000, color: '#3A5AF9', insight: "56% funded. At ₹5,000/month you'll complete this in 44 months. You might consider a top-up health insurance plan as an alternative for medical expenses." },
@@ -166,6 +179,19 @@ export const P = {
       { label: 'Cash flow', score: 82, color: '#0B8A68' }, { label: 'Debt', score: 71, color: '#0B8A68' },
       { label: 'Protection', score: 68, color: '#0B8A68' }, { label: 'Savings', score: 88, color: '#0B8A68' },
       { label: 'Investing', score: 76, color: '#0B8A68' }, { label: 'Planning', score: 64, color: '#C47A0C' },
+    ],
+    healthInsight: 'Your lowest score is Planning (64/100). Setting up a will and tax-optimising your portfolio could add 10+ points here — this is the last frontier to an 85+ score.',
+    investments: [
+      { name: 'HDFC Flexi Cap', type: 'Equity', value: 480000, pct: 38, color: '#3A5AF9' },
+      { name: 'ICICI Pru Bluechip', type: 'Equity', value: 320000, pct: 26, color: '#5A72F8' },
+      { name: 'Parag Parikh Flexi Cap', type: 'Equity', value: 240000, pct: 19, color: '#8FA3FB' },
+      { name: 'SBI Short Duration', type: 'Debt', value: 160000, pct: 13, color: '#0B8A68' },
+      { name: 'Liquid Fund', type: 'Cash', value: 40000, pct: 3, color: '#9197B8' },
+    ],
+    investmentInsight: "Your equity allocation is 84% — above your 70% target. HDFC Flexi Cap has underperformed Nifty 500 by 1.8% over 3 years. Switching ₹2L to a Nifty 500 index fund reduces cost and closes the gap.",
+    investmentActions: [
+      { label: 'Rebalance equity to 70% target', btn: 'Approve rebalance' },
+      { label: 'Switch HDFC Flexi Cap → Nifty 500 index', btn: 'Review switch' },
     ],
     hasCf: true, hasPlan: 'full',
     goals: [

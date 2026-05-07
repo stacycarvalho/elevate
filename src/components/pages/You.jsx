@@ -183,31 +183,39 @@ export default function You({ persona: p, showToast }) {
         </div>
       </div>
 
-      {p.tier >= 2 && (
-        <div className="card" style={{ marginBottom: '14px' }}>
-          <div className="sec-hdr"><div className="sec-title">Family & household</div></div>
-          <div style={{ fontSize: '12px', color: 'var(--t2)', lineHeight: 1.6, marginBottom: '12px' }}>
-            Link a partner for a combined household view. Grant a family member read-only access to your corpus runway and key numbers — without sharing individual transactions.
-          </div>
-          <button className="btn btn-ghost" style={{ width: '100%', fontSize: '12px' }} onClick={() => showToast('Family access settings')}>
-            Manage access
-          </button>
+      {/* Tier progress + Family & household — side by side on desktop */}
+      <div className={p.tier >= 2 ? 'you-bottom-grid' : ''}>
+        <div className="card">
+          <div className="sec-hdr"><div className="sec-title">Tier progress</div></div>
+          <TierProgression currentTier={p.tier} />
+          {p.tier < 3 && (
+            <div style={{ marginTop: '16px', padding: '12px', background: 'var(--surface2)', borderRadius: '10px', fontSize: '12px', color: 'var(--t2)', lineHeight: 1.6 }}>
+              {p.tier === 1
+                ? "You've had a positive surplus for 47 of the last 60 days. Emergency fund at 8%. Keep going — Goals tab unlocks when you hit 1 month of expenses saved."
+                : "Emergency fund active. First SIP running. Tier 3 features unlock when you've held an investment for 3+ months."}
+            </div>
+          )}
+          {p.tier >= 3 && (
+            <div style={{ marginTop: '12px', fontSize: '12px', color: 'var(--ok)', fontWeight: 500 }}>
+              ✓ All features unlocked. Agent autonomy expands as you approve more actions.
+            </div>
+          )}
         </div>
-      )}
 
-      <div className="card">
-        <div className="sec-hdr"><div className="sec-title">Tier progress</div></div>
-        <TierProgression currentTier={p.tier} />
-        {p.tier < 3 && (
-          <div style={{ marginTop: '16px', padding: '12px', background: 'var(--surface2)', borderRadius: '10px', fontSize: '12px', color: 'var(--t2)', lineHeight: 1.6 }}>
-            {p.tier === 1
-              ? "You've had a positive surplus for 47 of the last 60 days. Emergency fund at 8%. Keep going — Goals tab unlocks when you hit 1 month of expenses saved."
-              : 'Emergency fund active. First SIP running. Tier 3 features unlock when you\'ve held an investment for 3+ months.'}
-          </div>
-        )}
-        {p.tier >= 3 && (
-          <div style={{ marginTop: '12px', fontSize: '12px', color: 'var(--ok)', fontWeight: 500 }}>
-            ✓ All features unlocked. Agent autonomy expands as you approve more actions.
+        {p.tier >= 2 && (
+          <div className="card">
+            <div className="sec-hdr"><div className="sec-title">Family &amp; household</div></div>
+            <div style={{ fontSize: '12px', color: 'var(--t2)', lineHeight: 1.6, marginBottom: '12px' }}>
+              Link a partner for a combined household view. Grant a family member read-only access to your corpus runway and key numbers — without sharing individual transactions.
+            </div>
+            {p.tier >= 3 && (
+              <div style={{ background: 'var(--ok-dim)', borderRadius: '8px', padding: '10px 12px', marginBottom: '12px', fontSize: '12px', color: 'var(--ok)' }}>
+                ✓ Household view active. Spouse linked. Net worth consolidated.
+              </div>
+            )}
+            <button className="btn btn-ghost" style={{ width: '100%', fontSize: '12px' }} onClick={() => showToast('Family access settings')}>
+              Manage access
+            </button>
           </div>
         )}
       </div>

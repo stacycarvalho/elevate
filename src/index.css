@@ -392,6 +392,65 @@ nav{padding:8px 6px;flex:1;}
 /* ── BOTTOM NAV (mobile only) ── */
 .bottom-nav{display:none;}
 
+/* ── CONFETTI ── */
+.confetti-wrap{position:fixed;inset:0;pointer-events:none;z-index:999;overflow:hidden;}
+.confetti-piece{position:absolute;top:-12px;animation:confettiFall linear forwards;}
+@keyframes confettiFall{
+  0%{transform:translateY(-12px) rotate(0deg);opacity:1;}
+  100%{transform:translateY(110vh) rotate(720deg);opacity:0;}
+}
+
+/* ── EXPLAIN THIS BUTTON (right-aligned) ── */
+.ac-explain-right{margin-left:auto;}
+
+/* ── EMPTY ACTIONS ── */
+.empty-actions{text-align:center;padding:32px 16px;}
+.ea-icon{font-size:42px;margin-bottom:12px;}
+.ea-title{font-size:15px;font-weight:600;color:var(--t1);margin-bottom:8px;letter-spacing:-.2px;}
+.ea-body{font-size:12px;color:var(--t3);line-height:1.65;max-width:320px;margin:0 auto;}
+
+/* ── DIM ROW HOVER ── */
+.dim-row-hover{transition:background .15s;border-radius:6px;padding:2px 4px;margin:0 -4px;}
+.dim-row-hover:hover{background:var(--surface2);}
+.dim-row-hover .dim-fill{transition:opacity .15s;}
+.dim-row-hover:hover .dim-fill{opacity:0.7;}
+
+/* ── HOVER STATES FOR CHARTS ── */
+.trend-bar{transition:opacity .15s;}
+.trend-bar:hover{opacity:0.7;cursor:default;}
+.spend-fill{transition:opacity .15s;}
+.spend-row:hover .spend-fill{opacity:0.72;}
+.goal-bar{transition:opacity .15s;}
+.goal-card:hover .goal-bar{opacity:0.8;}
+.donut-seg{transition:opacity .2s;cursor:default;}
+.donut-seg:hover{opacity:0.72;}
+
+/* ── CF TOP GRID (KPI+trend | donut) ── */
+.cf-top-grid{display:grid;grid-template-columns:1fr 260px;gap:14px;margin-bottom:14px;align-items:start;}
+
+/* ── CF ANOMALY + MOBILE DROPDOWN ROW ── */
+.cf-anomaly-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+.cf-anomaly-msg{flex:1;min-width:0;font-size:12px;background:var(--warn-dim);border-radius:8px;padding:8px 12px;color:var(--warn);}
+.cat-filter-desktop{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+.cat-filter-mobile{display:none;padding:5px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:var(--sans);font-size:11px;color:var(--t1);background:var(--surface2);outline:none;cursor:pointer;flex-shrink:0;}
+
+/* ── SUBSCRIPTION SUB-TABS ── */
+.sub-tab-bar{display:flex;gap:2px;margin-bottom:12px;background:var(--surface2);padding:3px;border-radius:8px;}
+.sub-tab{flex:1;padding:5px 8px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;color:var(--t2);border:none;background:transparent;font-family:var(--sans);text-align:center;}
+.sub-tab.active{background:var(--surface);color:var(--brand);box-shadow:0 1px 3px rgba(20,22,60,.08);}
+
+/* ── YOU BOTTOM GRID (tier + family side by side) ── */
+.you-bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;}
+
+/* ── PLAN INVESTMENT CARD ── */
+.inv-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);}
+.inv-row:last-child{border-bottom:none;}
+.inv-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.inv-name{font-size:12px;color:var(--t2);flex:1;}
+.inv-type{font-size:10px;color:var(--t3);background:var(--surface2);padding:1px 6px;border-radius:6px;flex-shrink:0;}
+.inv-amt{font-size:12px;font-weight:500;font-family:var(--mono);color:var(--t1);flex-shrink:0;}
+.inv-pct{font-size:10px;color:var(--t3);min-width:28px;text-align:right;flex-shrink:0;}
+
 @media(max-width:768px){
   /* Hero — full bleed on mobile */
   .hero-banner{border-radius:0 0 24px 24px;padding:22px 20px 28px;margin:-14px -14px 20px;width:calc(100% + 28px);box-sizing:border-box;}
@@ -405,7 +464,11 @@ nav{padding:8px 6px;flex:1;}
   /* Layout — single column */
   .plan-grid{grid-template-columns:1fr;}
   .you-top-grid{grid-template-columns:1fr;}
+  .you-bottom-grid{grid-template-columns:1fr;}
   .home-action-btns{grid-template-columns:1fr;}
+  .cf-top-grid{grid-template-columns:1fr;}
+  .cat-filter-desktop{display:none;}
+  .cat-filter-mobile{display:block;}
 
   /* Bottom nav */
   .bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);z-index:200;padding-bottom:env(safe-area-inset-bottom);align-items:flex-end;}

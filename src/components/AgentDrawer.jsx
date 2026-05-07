@@ -1,16 +1,27 @@
 import { useState, useRef, useEffect } from 'react'
 import { aiResponses } from '../data/transactions'
 
-export default function AgentDrawer({ open, onClose, currentPage, persona }) {
+export default function AgentDrawer({ open, onClose, currentPage, persona, initialMessage }) {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const msgsRef = useRef(null)
+  const sentInitial = useRef(false)
 
   useEffect(() => {
     if (open) {
-      setMessages([{ role: 'ai', text: `Hi ${persona.first}! I'm watching your finances around the clock. Ask me anything.` }])
+      sentInitial.current = false
+      const greeting = { role: 'ai', text: `Hi ${persona.first}! I'm watching your finances around the clock. Ask me anything.` }
+      if (initialMessage) {
+        setMessages([greeting, { role: 'user', text: `Explain this: "${initialMessage}"` }])
+        setTimeout(() => {
+          const key = Object.keys(aiResponses).find(k => initialMessage.toLowerCase().includes(k)) || 'default'
+          setMessages(m => [...m, { role: 'ai', text: aiResponses[key] }])
+        }, 500)
+      } else {
+        setMessages([greeting])
+      }
     }
-  }, [open, persona.first])
+  }, [open, persona.first, initialMessage])
 
   useEffect(() => {
     if (msgsRef.current) msgsRef.current.scrollTop = 9999
@@ -40,7 +51,7 @@ export default function AgentDrawer({ open, onClose, currentPage, persona }) {
         <div style={{ fontSize: '11px', color: 'var(--t3)', marginBottom: '14px' }}>
           Context: you're on the {currentPage} page.
         </div>
-        <div className="conv-msgs" ref={msgsRef}>
+        <div className="conv-msgs" ref={msgsRef} style={{ maxHeight: '240px' }}>
           {messages.map((msg, i) => (
             <div key={i} className={`conv-msg ${msg.role === 'ai' ? 'msg-ai' : 'msg-user'}`}>
               {msg.text}

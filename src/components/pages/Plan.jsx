@@ -10,6 +10,15 @@ const FD_DATA = [
 
 const WI_DEFAULTS = { raise: 20, leave: 6, sip: 10000 }
 
+function Tooltip({ tip }) {
+  return (
+    <div className="tip-wrap" style={{ display: 'inline-flex', marginLeft: '4px' }}>
+      <span className="tip-icon">?</span>
+      <div className="tip-box">{tip}</div>
+    </div>
+  )
+}
+
 function WhatIf({ persona: p, showToast }) {
   const [scenario, setScenario] = useState('raise')
   const [wiVal, setWiVal] = useState(20)
@@ -129,19 +138,11 @@ function EditGoalModal({ goal, onClose, onSave }) {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
           <div>
             <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--t3)', marginBottom: '5px' }}>Target (₹)</div>
-            <input
-              className="wi-input" type="number" style={{ width: '100%', maxWidth: 'unset' }}
-              value={target}
-              onChange={e => setTarget(Number(e.target.value))}
-            />
+            <input className="wi-input" type="number" style={{ width: '100%', maxWidth: 'unset' }} value={target} onChange={e => setTarget(Number(e.target.value))} />
           </div>
           <div>
             <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--t3)', marginBottom: '5px' }}>Monthly (₹)</div>
-            <input
-              className="wi-input" type="number" style={{ width: '100%', maxWidth: 'unset' }}
-              value={monthly}
-              onChange={e => setMonthly(Number(e.target.value))}
-            />
+            <input className="wi-input" type="number" style={{ width: '100%', maxWidth: 'unset' }} value={monthly} onChange={e => setMonthly(Number(e.target.value))} />
           </div>
         </div>
 
@@ -167,18 +168,12 @@ function EditGoalModal({ goal, onClose, onSave }) {
   )
 }
 
-function GoalConversation({ showToast }) {
-  const [open, setOpen] = useState(false)
-  const [messages, setMessages] = useState([])
+function NewGoalModal({ onClose, onCreated }) {
+  const [messages, setMessages] = useState([{ role: 'ai', text: goalFlow[0] }])
   const [input, setInput] = useState('')
-  const [state, setState] = useState(0)
+  const [step, setStep] = useState(0)
+  const [answers, setAnswers] = useState([])
   const msgsRef = useRef(null)
-
-  const openConv = () => {
-    setState(0)
-    setMessages([{ role: 'ai', text: goalFlow[0] }])
-    setOpen(true)
-  }
 
   useEffect(() => {
     if (msgsRef.current) msgsRef.current.scrollTop = 9999
@@ -186,17 +181,39 @@ function GoalConversation({ showToast }) {
 
   const send = () => {
     if (!input.trim()) return
-    const text = input
+    const userInput = input.trim()
     setInput('')
-    const next = state + 1
-    setState(next)
-    setMessages(m => [...m, { role: 'user', text }])
+    const newAnswers = [...answers, userInput]
+    setAnswers(newAnswers)
+    setMessages(m => [...m, { role: 'user', text: userInput }])
+    const nextStep = step + 1
+    setStep(nextStep)
+
     setTimeout(() => {
-      if (next < goalFlow.length) {
-        setMessages(m => [...m, { role: 'ai', text: goalFlow[next] }])
+      if (nextStep < goalFlow.length) {
+        setMessages(m => [...m, { role: 'ai', text: goalFlow[nextStep] }])
       } else {
-        setMessages(m => [...m, { role: 'ai', text: 'Auto-save rule created and linked to your new goal. 🎉' }])
-        showToast('Goal created!')
+        const name = newAnswers[0] || 'New goal'
+        const rawTarget = newAnswers[1]?.replace(/[^\d]/g, '')
+        const rawMonthly = newAnswers[2]?.replace(/[^\d]/g, '')
+        const target = parseInt(rawTarget) || 100000
+        const monthly = parseInt(rawMonthly) || 5000
+        const palette = ['#3A5AF9', '#0B8A68', '#C47A0C', '#C42B2B', '#8FA3FB']
+        const color = palette[Math.floor(Math.random() * palette.length)]
+        const mos = Math.ceil(target / monthly)
+        const newGoal = {
+          name,
+          target,
+          current: 0,
+          monthly,
+          color,
+          insight: `Starting fresh! At ₹${monthly.toLocaleString('en-IN')}/month you'll reach this goal in ~${mos} months. Your agent will track every auto-save.`,
+        }
+        setMessages(m => [...m, { role: 'ai', text: `Goal created and auto-save rule set up. 🎉 I'll track "${name}" alongside your other goals.` }])
+        setTimeout(() => {
+          onCreated(newGoal)
+          onClose()
+        }, 1400)
       }
     }, 600)
   }
@@ -204,30 +221,33 @@ function GoalConversation({ showToast }) {
   const handleKey = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }
 
   return (
-    <>
-      <button className="sec-link" onClick={openConv}>+ New goal</button>
-      {open && (
-        <div style={{ marginTop: '12px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '10px' }}>✦ Let's set up a new goal</div>
-          <div className="conv-msgs" ref={msgsRef}>
-            {messages.map((msg, i) => (
-              <div key={i} className={`conv-msg ${msg.role === 'ai' ? 'msg-ai' : 'msg-user'}`}>{msg.text}</div>
-            ))}
-          </div>
-          <div className="conv-wrap">
-            <textarea
-              className="conv-input"
-              placeholder="What are you saving for?"
-              rows={1}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKey}
-            />
-            <button className="conv-send" onClick={send}>↑</button>
-          </div>
+    <div className="action-modal-overlay" onClick={onClose}>
+      <div className="action-modal" onClick={e => e.stopPropagation()}>
+        <div className="am-handle" />
+        <div className="am-chip am-chip-blue">New goal</div>
+        <div className="am-title" style={{ marginBottom: '14px' }}>Let's set up a goal ✦</div>
+        <div className="conv-msgs" ref={msgsRef} style={{ maxHeight: '200px' }}>
+          {messages.map((msg, i) => (
+            <div key={i} className={`conv-msg ${msg.role === 'ai' ? 'msg-ai' : 'msg-user'}`}>{msg.text}</div>
+          ))}
         </div>
-      )}
-    </>
+        <div className="conv-wrap">
+          <textarea
+            className="conv-input"
+            placeholder="Type your answer…"
+            rows={1}
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKey}
+            autoFocus
+          />
+          <button className="conv-send" onClick={send}>↑</button>
+        </div>
+        <button className="btn btn-ghost" style={{ width: '100%', marginTop: '8px', fontSize: '11px' }} onClick={onClose}>
+          Cancel
+        </button>
+      </div>
+    </div>
   )
 }
 
@@ -235,6 +255,9 @@ export default function Plan({ persona: p, showToast }) {
   const trendMonths = ['N', 'D', 'J', 'F', 'M', 'A']
   const [editGoal, setEditGoal] = useState(null)
   const [goalEdits, setGoalEdits] = useState({})
+  const [newGoals, setNewGoals] = useState([])
+  const [newGoalOpen, setNewGoalOpen] = useState(false)
+  const [invActedMap, setInvActedMap] = useState({})
 
   const handleSaveGoal = (idx, vals) => {
     setGoalEdits(e => ({ ...e, [idx]: vals }))
@@ -243,8 +266,81 @@ export default function Plan({ persona: p, showToast }) {
 
   const getGoal = (g, i) => ({ ...g, ...(goalEdits[i] || {}) })
 
+  const allGoals = [...p.goals.map((g, i) => getGoal(g, i)), ...newGoals]
+
+  const handleNewGoalCreated = (goal) => {
+    setNewGoals(prev => [...prev, goal])
+    showToast('Goal created! 🎉')
+  }
+
+  const hasInvestments = p.investments && p.investments.length > 0
+
   const leftContent = (
     <>
+      {/* ── INVESTMENT PORTFOLIO (Priya / Mehul) ── */}
+      {hasInvestments && (
+        <div className="card" style={{ marginBottom: '14px' }}>
+          <div className="sec-hdr">
+            <div className="sec-title">📈 Portfolio</div>
+            <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 8px', borderRadius: '8px', background: 'var(--brand-dim)', color: 'var(--brand)' }}>
+              {p.investments.reduce((s, inv) => s + inv.value, 0) >= 100000
+                ? `₹${(p.investments.reduce((s, inv) => s + inv.value, 0) / 100000).toFixed(1)}L`
+                : `₹${(p.investments.reduce((s, inv) => s + inv.value, 0) / 1000).toFixed(0)}K`} total
+            </span>
+          </div>
+
+          {p.investments.map((inv, i) => (
+            <div key={i} className="inv-row">
+              <div className="inv-dot" style={{ background: inv.color }} />
+              <div className="inv-name">{inv.name}</div>
+              <span className="inv-type">{inv.type}</span>
+              <span className="inv-pct">{inv.pct}%</span>
+              <span className="inv-amt">₹{fmt(inv.value)}</span>
+            </div>
+          ))}
+
+          {/* Allocation bar */}
+          <div style={{ display: 'flex', height: '6px', borderRadius: '3px', overflow: 'hidden', margin: '14px 0 12px' }}>
+            {p.investments.map((inv, i) => (
+              <div key={i} style={{ width: `${inv.pct}%`, background: inv.color, transition: 'opacity .15s' }}
+                className="donut-seg">
+                <title>{inv.name}: {inv.pct}%</title>
+              </div>
+            ))}
+          </div>
+
+          {/* AI insight */}
+          {p.investmentInsight && (
+            <div style={{ background: 'var(--brand-dim)', border: '1px solid rgba(58,90,249,.12)', borderRadius: '9px', padding: '10px 12px', marginBottom: '12px' }}>
+              <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--brand)', marginBottom: '3px' }}>✦ AI insight</div>
+              <div style={{ fontSize: '12px', color: 'var(--t2)', lineHeight: 1.55 }}>{p.investmentInsight}</div>
+            </div>
+          )}
+
+          {/* Action buttons */}
+          {p.investmentActions && p.investmentActions.map((action, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 12px', border: '1px solid var(--border)', borderRadius: '9px', marginBottom: '6px' }}>
+              <span style={{ fontSize: '12px', color: 'var(--t2)', flex: 1 }}>{action.label}</span>
+              {invActedMap[i] ? (
+                <span style={{ fontSize: '11px', color: 'var(--ok)', fontWeight: 600 }}>✓ Done</span>
+              ) : (
+                <button
+                  className="ac-btn ac-approve"
+                  style={{ padding: '4px 10px', fontSize: '10px' }}
+                  onClick={() => {
+                    setInvActedMap(m => ({ ...m, [i]: true }))
+                    showToast(`${action.btn} — queued in agent log`)
+                  }}
+                >
+                  {action.btn}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── CORPUS (Sunita) ── */}
       {p.hasPlan === 'corpus' && (
         <div className="card" style={{ marginBottom: '14px' }}>
           <div style={{ fontSize: '10px', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: '4px' }}>At your current spending</div>
@@ -270,6 +366,7 @@ export default function Plan({ persona: p, showToast }) {
         </div>
       )}
 
+      {/* ── FULL FIRE PLAN (Mehul) ── */}
       {p.hasPlan === 'full' && (
         <div className="card" style={{ marginBottom: '14px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
@@ -295,13 +392,35 @@ export default function Plan({ persona: p, showToast }) {
             </div>
           </div>
           <div className="kpi-grid cols3">
-            <div className="kpi"><div className="kpi-label">FIRE target</div><div className="kpi-value" style={{ fontSize: '16px' }}>₹4.0Cr</div><span className="kpi-delta delta-neutral">at age 50</span></div>
-            <div className="kpi"><div className="kpi-label">Current corpus</div><div className="kpi-value" style={{ fontSize: '16px' }}>₹1.24Cr</div><span className="kpi-delta delta-up">↑ 31% done</span></div>
-            <div className="kpi"><div className="kpi-label">FIRE date</div><div className="kpi-value" style={{ fontSize: '16px' }}>Age 54</div><span className="kpi-delta delta-up">3yr ahead</span></div>
+            <div className="kpi">
+              <div className="kpi-label">
+                FIRE target
+                <Tooltip tip="The corpus you need to retire early — based on your annual expenses × 25 (the 4% withdrawal rule)." />
+              </div>
+              <div className="kpi-value" style={{ fontSize: '16px' }}>₹4.0Cr</div>
+              <span className="kpi-delta delta-neutral">at age 50</span>
+            </div>
+            <div className="kpi">
+              <div className="kpi-label">
+                Current corpus
+                <Tooltip tip="Your total invested assets today: mutual funds, PPF, equity. Home equity excluded." />
+              </div>
+              <div className="kpi-value" style={{ fontSize: '16px' }}>₹1.24Cr</div>
+              <span className="kpi-delta delta-up">↑ 31% done</span>
+            </div>
+            <div className="kpi">
+              <div className="kpi-label">
+                FIRE date
+                <Tooltip tip="Projected age at which your corpus hits the target, at your current savings rate." />
+              </div>
+              <div className="kpi-value" style={{ fontSize: '16px' }}>Age 54</div>
+              <span className="kpi-delta delta-up">3yr ahead</span>
+            </div>
           </div>
         </div>
       )}
 
+      {/* ── GOALS + NW (Priya) ── */}
       {p.hasPlan === 'goals+nw' && (
         <div className="card" style={{ marginBottom: '14px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
@@ -327,18 +446,19 @@ export default function Plan({ persona: p, showToast }) {
         </div>
       )}
 
+      {/* ── GOALS LIST ── */}
       {p.hasPlan !== 'corpus' && (
         <div className="card" style={{ marginBottom: '14px' }}>
           <div className="sec-hdr">
             <div className="sec-title">Your goals</div>
-            <GoalConversation showToast={showToast} />
+            <button className="sec-link" onClick={() => setNewGoalOpen(true)}>+ New goal</button>
           </div>
-          {p.goals.map((g, i) => {
-            const goal = getGoal(g, i)
+          {allGoals.map((goal, i) => {
             const pct = Math.min(100, Math.round(goal.current / goal.target * 100))
             const mos = Math.ceil((goal.target - goal.current) / goal.monthly)
+            const isNew = i >= p.goals.length
             return (
-              <div key={i} className="goal-card">
+              <div key={i} className="goal-card" style={isNew ? { border: '1px solid rgba(58,90,249,.3)', background: 'var(--brand-dim)' } : {}}>
                 <div className="goal-top">
                   <div>
                     <div className="goal-name">{goal.name}</div>
@@ -346,13 +466,16 @@ export default function Plan({ persona: p, showToast }) {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ fontSize: '13px', fontWeight: 600, fontFamily: 'var(--mono)', color: 'var(--brand)' }}>{pct}%</div>
-                    <button
-                      className="sec-link"
-                      style={{ fontSize: '11px', border: '1px solid var(--border)', borderRadius: '6px', padding: '3px 8px', color: 'var(--t2)' }}
-                      onClick={() => setEditGoal(i)}
-                    >
-                      Edit
-                    </button>
+                    {!isNew && (
+                      <button
+                        className="sec-link"
+                        style={{ fontSize: '11px', border: '1px solid var(--border)', borderRadius: '6px', padding: '3px 8px', color: 'var(--t2)' }}
+                        onClick={() => setEditGoal(i)}
+                      >
+                        Edit
+                      </button>
+                    )}
+                    {isNew && <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--brand)', padding: '2px 7px', borderRadius: '8px', background: 'rgba(58,90,249,.12)' }}>New</span>}
                   </div>
                 </div>
                 <div className="goal-track">
@@ -376,9 +499,15 @@ export default function Plan({ persona: p, showToast }) {
     <>
       {editGoal !== null && (
         <EditGoalModal
-          goal={getGoal(p.goals[editGoal], editGoal)}
+          goal={allGoals[editGoal]}
           onClose={() => setEditGoal(null)}
           onSave={(vals) => handleSaveGoal(editGoal, vals)}
+        />
+      )}
+      {newGoalOpen && (
+        <NewGoalModal
+          onClose={() => setNewGoalOpen(false)}
+          onCreated={handleNewGoalCreated}
         />
       )}
 

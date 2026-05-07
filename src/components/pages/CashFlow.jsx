@@ -52,9 +52,67 @@ function TrendLine({ spendData, incomeData, months }) {
       <path d={path(incomeData)} fill="none" stroke="var(--ok)" strokeWidth="1.5" strokeLinejoin="round" />
       <path d={path(spendData)} fill="none" stroke="var(--brand)" strokeWidth="1.5" strokeLinejoin="round" />
       {spendData.map((v, i) => (
-        <circle key={i} cx={x(i)} cy={y(v)} r="2.5" fill="var(--brand)" />
+        <circle key={i} className="donut-seg" cx={x(i)} cy={y(v)} r="3" fill="var(--brand)" stroke="var(--surface)" strokeWidth="1.5">
+          <title>Spend: ₹{fmt(v)}</title>
+        </circle>
+      ))}
+      {incomeData.map((v, i) => (
+        <circle key={`inc-${i}`} className="donut-seg" cx={x(i)} cy={y(v)} r="3" fill="var(--ok)" stroke="var(--surface)" strokeWidth="1.5">
+          <title>Income: ₹{fmt(v)}</title>
+        </circle>
       ))}
     </svg>
+  )
+}
+
+function DonutChart({ investments }) {
+  const S = 120, R = 44, stroke = 15
+  const cx = S / 2, cy = S / 2
+  const circ = 2 * Math.PI * R
+  const total = investments.reduce((s, inv) => s + inv.value, 0)
+  let accumulated = 0
+
+  return (
+    <div>
+      <svg viewBox={`0 0 ${S} ${S}`} width={S} height={S} style={{ display: 'block', margin: '0 auto' }}>
+        {investments.map((inv, i) => {
+          const dashLen = (inv.pct / 100) * circ
+          const seg = (
+            <circle
+              key={i}
+              className="donut-seg"
+              cx={cx} cy={cy} r={R}
+              fill="none"
+              stroke={inv.color}
+              strokeWidth={stroke}
+              strokeDasharray={`${dashLen} ${circ - dashLen}`}
+              strokeDashoffset={-accumulated}
+              transform={`rotate(-90 ${cx} ${cy})`}
+            >
+              <title>{inv.name} ({inv.pct}%) — ₹{fmt(inv.value)}</title>
+            </circle>
+          )
+          accumulated += dashLen
+          return seg
+        })}
+        <text x={cx} y={cy - 5} textAnchor="middle" fontSize="11" fontWeight="600" fill="var(--t1)" fontFamily="var(--mono)">
+          ₹{fmt(total)}
+        </text>
+        <text x={cx} y={cy + 8} textAnchor="middle" fontSize="8" fill="var(--t3)" fontFamily="var(--sans)">
+          PORTFOLIO
+        </text>
+      </svg>
+      <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+        {investments.map((inv, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '11px' }}>
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: inv.color, flexShrink: 0 }} />
+            <span style={{ flex: 1, color: 'var(--t2)', fontSize: '10px' }}>{inv.name}</span>
+            <span style={{ color: 'var(--t3)', fontSize: '10px' }}>{inv.type}</span>
+            <span style={{ fontFamily: 'var(--mono)', fontWeight: 500, color: 'var(--t1)', fontSize: '10px' }}>{inv.pct}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -79,14 +137,12 @@ Best regards`
       <div className="action-modal" style={{ maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
         <div className="am-handle" />
         {sent ? (
-          <>
-            <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <div style={{ fontSize: '36px', marginBottom: '12px' }}>✉️</div>
-              <div className="am-title">Email sent!</div>
-              <div className="am-impact">Your negotiation email has been drafted and is ready to send. Check your email client.</div>
-              <button className="btn btn-primary" style={{ width: '100%', marginTop: '16px' }} onClick={onClose}>Done</button>
-            </div>
-          </>
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <div style={{ fontSize: '36px', marginBottom: '12px' }}>✉️</div>
+            <div className="am-title">Email sent!</div>
+            <div className="am-impact">Your negotiation email has been drafted and is ready to send. Check your email client.</div>
+            <button className="btn btn-primary" style={{ width: '100%', marginTop: '16px' }} onClick={onClose}>Done</button>
+          </div>
         ) : (
           <>
             <div className="am-chip am-chip-blue">Negotiation draft</div>
@@ -123,6 +179,7 @@ export default function CashFlow({ persona: p, showToast }) {
   const [dateRange, setDateRange] = useState('30d')
   const [activeTab, setActiveTab] = useState('txns')
   const [activeCat, setActiveCat] = useState('All')
+  const [subTab, setSubTab] = useState('needed')
   const [subStatus, setSubStatus] = useState({})
   const [negotiating, setNegotiating] = useState(null)
 
@@ -168,7 +225,6 @@ export default function CashFlow({ persona: p, showToast }) {
   const scaledSpend = Math.round(d.spend * mult)
   const scaledSurplus = scaledIncome - scaledSpend
 
-  // Scale chart data proportionally
   const chartMonths = MONTHS_BY_RANGE[dateRange]
   const scaledSpendData = d.spendData.map(v => Math.round(v * mult / 6))
   const scaledIncomeData = d.incomeData.map(v => Math.round(v * mult / 6))
@@ -188,8 +244,11 @@ export default function CashFlow({ persona: p, showToast }) {
     }
   }
 
-  const activeSubs = subs.filter((_, i) => subStatus[i] !== 'cancelling')
-  const cancelledSubs = subs.filter((_, i) => subStatus[i] === 'cancelling')
+  // Subs that haven't been acted on yet (have a prompt)
+  const actionNeededSubs = subs.filter((s, i) => subStatus[i] !== 'kept' && subStatus[i] !== 'cancelling' && s.prompt)
+  const allSubsView = subs
+
+  const hasInvestments = p.investments && p.investments.length > 0
 
   return (
     <>
@@ -209,43 +268,51 @@ export default function CashFlow({ persona: p, showToast }) {
         ))}
       </div>
 
-      <div className="cf-header-card" style={{ marginBottom: '14px' }}>
-        <div className="kpi-grid cols3" style={{ marginBottom: '16px' }}>
-          <div className="kpi">
-            <div className="kpi-label">
-              Money in <Tooltip tip="Total income received this period." />
+      {/* KPI + trend — with optional donut chart for Priya/Mehul */}
+      <div className={hasInvestments ? 'cf-top-grid' : ''}>
+        <div className="cf-header-card" style={{ marginBottom: hasInvestments ? 0 : '14px' }}>
+          <div className="kpi-grid cols3" style={{ marginBottom: '16px' }}>
+            <div className="kpi">
+              <div className="kpi-label">Money in <Tooltip tip="Total income received this period." /></div>
+              <div className="kpi-value">₹{fmt(scaledIncome)}</div>
+              <span className="kpi-delta delta-up">↑ Salary credited</span>
             </div>
-            <div className="kpi-value">₹{fmt(scaledIncome)}</div>
-            <span className="kpi-delta delta-up">↑ Salary credited</span>
+            <div className="kpi">
+              <div className="kpi-label">Money out <Tooltip tip="Total money that left your accounts." /></div>
+              <div className="kpi-value">₹{fmt(scaledSpend)}</div>
+              <span className="kpi-delta delta-neutral">{range.label}</span>
+            </div>
+            <div className="kpi">
+              <div className="kpi-label">What's left <Tooltip tip="Income minus spending." /></div>
+              <div className="kpi-value" style={{ color: 'var(--ok)' }}>₹{fmt(scaledSurplus)}</div>
+              <span className="kpi-delta delta-up">↑ Available to save</span>
+            </div>
           </div>
-          <div className="kpi">
-            <div className="kpi-label">
-              Money out <Tooltip tip="Total money that left your accounts." />
-            </div>
-            <div className="kpi-value">₹{fmt(scaledSpend)}</div>
-            <span className="kpi-delta delta-neutral">{range.label}</span>
+
+          <div style={{ fontSize: '11px', fontWeight: 500, color: 'var(--t3)', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
+            <span>Trend — {range.label}</span>
+            <span style={{ display: 'flex', gap: '10px' }}>
+              <span style={{ color: 'var(--brand)' }}>— Spending</span>
+              <span style={{ color: 'var(--ok)' }}>— Income</span>
+            </span>
           </div>
-          <div className="kpi">
-            <div className="kpi-label">
-              What's left <Tooltip tip="Income minus spending." />
-            </div>
-            <div className="kpi-value" style={{ color: 'var(--ok)' }}>₹{fmt(scaledSurplus)}</div>
-            <span className="kpi-delta delta-up">↑ Available to save</span>
+          <TrendLine spendData={scaledSpendData} incomeData={scaledIncomeData} months={chartMonths} />
+          <div className="mini-labels" style={{ marginTop: '4px' }}>
+            {chartMonths.map((m, i) => <div key={i} className="mini-label">{m}</div>)}
           </div>
         </div>
 
-        <div style={{ fontSize: '11px', fontWeight: 500, color: 'var(--t3)', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
-          <span>Trend — {range.label}</span>
-          <span style={{ display: 'flex', gap: '10px' }}>
-            <span style={{ color: 'var(--brand)' }}>— Spending</span>
-            <span style={{ color: 'var(--ok)' }}>— Income</span>
-          </span>
-        </div>
-        <TrendLine spendData={scaledSpendData} incomeData={scaledIncomeData} months={chartMonths} />
-        <div className="mini-labels" style={{ marginTop: '4px' }}>
-          {chartMonths.map((m, i) => <div key={i} className="mini-label">{m}</div>)}
-        </div>
+        {hasInvestments && (
+          <div className="card card-sm" style={{ marginBottom: '14px' }}>
+            <div className="sec-hdr" style={{ marginBottom: '12px' }}>
+              <div className="sec-title">Investment allocation</div>
+            </div>
+            <DonutChart investments={p.investments} />
+          </div>
+        )}
       </div>
+
+      {!hasInvestments && <div style={{ marginBottom: '14px' }} />}
 
       <div className="dash-grid">
         <div>
@@ -255,11 +322,21 @@ export default function CashFlow({ persona: p, showToast }) {
               <button className={`tab ${activeTab === 'subs' ? 'active' : ''}`} onClick={() => setActiveTab('subs')}>Subscriptions</button>
             </div>
 
+            {/* TRANSACTIONS */}
             <div className={`tab-content ${activeTab === 'txns' ? 'active' : ''}`}>
-              <div style={{ background: 'var(--warn-dim)', borderRadius: '8px', padding: '10px 12px', marginBottom: '10px', fontSize: '12px', color: 'var(--warn)' }}>
-                ⚠ Anomaly: Airtel charge is ₹200 higher than your usual amount this month.
+              {/* Anomaly + mobile dropdown on same row */}
+              <div className="cf-anomaly-row">
+                <div className="cf-anomaly-msg">⚠ Anomaly: Airtel charge is ₹200 higher than usual this month.</div>
+                <select
+                  className="cat-filter-mobile"
+                  value={activeCat}
+                  onChange={e => setActiveCat(e.target.value)}
+                >
+                  {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                </select>
               </div>
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
+              {/* Desktop chips */}
+              <div className="cat-filter-desktop">
                 {categories.map(cat => (
                   <button
                     key={cat}
@@ -290,47 +367,81 @@ export default function CashFlow({ persona: p, showToast }) {
               )}
             </div>
 
+            {/* SUBSCRIPTIONS */}
             <div className={`tab-content ${activeTab === 'subs' ? 'active' : ''}`}>
-              {activeSubs.map((s, idx) => {
-                const i = subs.indexOf(s)
-                const status = subStatus[i]
-                return (
-                  <div key={i} style={{ border: '1px solid var(--border)', borderRadius: '10px', padding: '14px', marginBottom: '8px', opacity: status === 'kept' ? 0.8 : 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                      <div style={{ fontSize: '13px', fontWeight: 500 }}>{s.name}</div>
-                      <div style={{ fontSize: '12px', fontWeight: 500, fontFamily: 'var(--mono)' }}>{s.amt}</div>
-                    </div>
-                    <div style={{ fontSize: '11px', color: 'var(--t3)', marginBottom: '8px' }}>{s.plan}</div>
-                    {status !== 'kept' && (
-                      <div style={{ fontSize: '12px', color: 'var(--t2)', background: 'var(--surface2)', padding: '8px 10px', borderRadius: '7px', marginBottom: '10px' }}>
-                        💡 {s.prompt}
-                      </div>
-                    )}
-                    {status === 'kept' ? (
-                      <div style={{ fontSize: '11px', color: 'var(--ok)', fontWeight: 500 }}>✓ Keeping this subscription</div>
-                    ) : (
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                        <button className="ac-btn ac-approve btn-sm" onClick={() => handleSubAction(i, 'keep')}>Keep</button>
-                        <button className="ac-btn ac-dismiss btn-sm" onClick={() => handleSubAction(i, 'cancel')}>Cancel</button>
-                        <button className="ac-btn ac-dismiss btn-sm" onClick={() => handleSubAction(i, 'negotiate')}>Negotiate</button>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-              {cancelledSubs.length > 0 && (
+              <div className="sub-tab-bar">
+                <button
+                  className={`sub-tab ${subTab === 'needed' ? 'active' : ''}`}
+                  onClick={() => setSubTab('needed')}
+                >
+                  Action needed
+                  {actionNeededSubs.length > 0 && (
+                    <span className="tab-count warn" style={{ marginLeft: '4px' }}>{actionNeededSubs.length}</span>
+                  )}
+                </button>
+                <button
+                  className={`sub-tab ${subTab === 'all' ? 'active' : ''}`}
+                  onClick={() => setSubTab('all')}
+                >
+                  All subscriptions
+                </button>
+              </div>
+
+              {subTab === 'needed' && (
                 <>
-                  <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.5px', margin: '14px 0 8px' }}>
-                    Cancellations in progress
-                  </div>
-                  {cancelledSubs.map(s => {
-                    const i = subs.indexOf(s)
-                    return (
-                      <div key={i} style={{ border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 14px', marginBottom: '8px', opacity: 0.5 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div style={{ fontSize: '12px', fontWeight: 500 }}>{s.name}</div>
-                          <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 8px', borderRadius: '8px', background: 'var(--danger-dim)', color: 'var(--danger)' }}>Cancelling</span>
+                  {actionNeededSubs.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '24px', color: 'var(--t3)', fontSize: '12px' }}>
+                      ✓ All subscriptions reviewed. Nice work.
+                    </div>
+                  ) : (
+                    actionNeededSubs.map(s => {
+                      const i = subs.indexOf(s)
+                      return (
+                        <div key={i} style={{ border: '1px solid var(--border)', borderRadius: '10px', padding: '14px', marginBottom: '8px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                            <div style={{ fontSize: '13px', fontWeight: 500 }}>{s.name}</div>
+                            <div style={{ fontSize: '12px', fontWeight: 500, fontFamily: 'var(--mono)' }}>{s.amt}</div>
+                          </div>
+                          <div style={{ fontSize: '11px', color: 'var(--t3)', marginBottom: '8px' }}>{s.plan}</div>
+                          <div style={{ fontSize: '12px', color: 'var(--t2)', background: 'var(--surface2)', padding: '8px 10px', borderRadius: '7px', marginBottom: '10px' }}>
+                            💡 {s.prompt}
+                          </div>
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <button className="ac-btn ac-approve btn-sm" onClick={() => handleSubAction(i, 'keep')}>Keep</button>
+                            <button className="ac-btn ac-dismiss btn-sm" onClick={() => handleSubAction(i, 'cancel')}>Cancel</button>
+                            <button className="ac-btn ac-dismiss btn-sm" onClick={() => handleSubAction(i, 'negotiate')}>Negotiate</button>
+                          </div>
                         </div>
+                      )
+                    })
+                  )}
+                </>
+              )}
+
+              {subTab === 'all' && (
+                <>
+                  {allSubsView.map((s, i) => {
+                    const status = subStatus[i]
+                    return (
+                      <div key={i} style={{ border: '1px solid var(--border)', borderRadius: '10px', padding: '14px', marginBottom: '8px', opacity: status === 'cancelling' ? 0.5 : 1 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                          <div>
+                            <div style={{ fontSize: '13px', fontWeight: 500 }}>{s.name}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--t3)', marginTop: '2px' }}>{s.plan}</div>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                            <div style={{ fontSize: '12px', fontWeight: 500, fontFamily: 'var(--mono)' }}>{s.amt}</div>
+                            {status === 'kept' && <span style={{ fontSize: '10px', color: 'var(--ok)', fontWeight: 600 }}>✓ Keeping</span>}
+                            {status === 'cancelling' && <span style={{ fontSize: '10px', padding: '1px 7px', borderRadius: '8px', background: 'var(--danger-dim)', color: 'var(--danger)', fontWeight: 600 }}>Cancelling</span>}
+                          </div>
+                        </div>
+                        {!status && (
+                          <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                            <button className="ac-btn ac-approve btn-sm" onClick={() => handleSubAction(i, 'keep')}>Keep</button>
+                            <button className="ac-btn ac-dismiss btn-sm" onClick={() => handleSubAction(i, 'cancel')}>Cancel</button>
+                            <button className="ac-btn ac-dismiss btn-sm" onClick={() => handleSubAction(i, 'negotiate')}>Negotiate</button>
+                          </div>
+                        )}
                       </div>
                     )
                   })}

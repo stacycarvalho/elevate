@@ -26,6 +26,7 @@ export default function App() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [onboardingOpen, setOnboardingOpen] = useState(false)
   const [toast, setToast] = useState({ message: '', visible: false })
+  const [drawerMessage, setDrawerMessage] = useState('')
 
   const showToast = useCallback((msg) => {
     setToast({ message: msg, visible: true })
@@ -80,7 +81,7 @@ export default function App() {
               key={`home-${currentPersona}`}
               persona={P[currentPersona]}
               onPageChange={handlePageChange}
-              onAsk={() => setDrawerOpen(true)}
+              onAsk={(msg = '') => { setDrawerMessage(msg); setDrawerOpen(true) }}
               showToast={showToast}
             />
           </div>
@@ -99,19 +100,20 @@ export default function App() {
         </div>
       </main>
 
-      <button className="fab" onClick={() => setDrawerOpen(true)}>✦ Ask agent</button>
+      <button className="fab" onClick={() => { setDrawerMessage(''); setDrawerOpen(true) }}>✦ Ask agent</button>
       <BottomNav
         currentPage={currentPage}
         onPageChange={handlePageChange}
-        onAsk={() => setDrawerOpen(true)}
+        onAsk={() => { setDrawerMessage(''); setDrawerOpen(true) }}
         neededCount={P[currentPersona].needed.length}
       />
 
       <AgentDrawer
         open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        onClose={() => { setDrawerOpen(false); setDrawerMessage('') }}
         currentPage={currentPage}
         persona={P[currentPersona]}
+        initialMessage={drawerMessage}
       />
 
       {onboardingOpen && (
